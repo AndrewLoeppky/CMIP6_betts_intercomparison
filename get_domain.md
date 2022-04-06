@@ -47,8 +47,8 @@ from metpy.plots import SkewT
 
 ```{code-cell} ipython3
 # Attributes of the model we want to analyze (put in csv later)
-#source_id = 'CESM2-SE'
-source_id = 'GFDL-ESM4'
+source_id = 'CESM2-SE' 
+#source_id = 'GFDL-ESM4' # working fig 11
 #source_id = "CanESM5" 
 #source_id = 'HadGEM3-GC31-MM'
 
@@ -80,39 +80,11 @@ lons = (261, 263) # lon min, lon max
 years = (100, 300) # start year, end year (note, no leap days)
 #ceil = 500 # top of domain, hPa
 
-
-print(f"""Fetching domain:
-          {source_id = }
-          {experiment_id = }
-          {table_id = }
-          {lats = }
-          {lons = }
-          {years = }
-          dataset name: my_ds (xarray Dataset)""")
-print("\n", "*" * 50, "\n")
+save_data = False # save as netcdf for further processing?
 ```
 
 ```{code-cell} ipython3
-# list of fields required for input calculations
-required_fields = ("ps",  # surface pressure
-                      "cl",  # cloud fraction
-                      "ta",  # air temperature
-                      "ts",  # surface temperature
-                      "hus", # specific humidity
-                      "hfls", # Surface Upward Latent Heat Flux
-                      "hfss", # Surface Upward Sensible Heat Flux
-                      "rlds",  # surface downwelling longwave
-                      "rlus",  # surface upwelling longwave
-                      "rsds", # downwelling short wave
-                      "rsus", # upwelling short wave
-                      "hurs",  # near surface RH
-                      "pr", # precipitation, all phases
-                      "evspsbl", # evaporation, sublimation, transpiration
-                      "wap",  # omega (subsidence rate in pressure coords)
-                   )
-
-required_fields = ['tas', 'mrsos', 'huss'] # temporary hack, but this will work for fig 11
-# i need to know which models we intend to parse for this project, they do not all have the same fields
+required_fields = ['tas', 'mrsos', 'huss', 'ps'] 
 ```
 
 ```{code-cell} ipython3
@@ -129,15 +101,15 @@ df_in = pd.read_csv(file_path)
 ```
 
 ```{code-cell} ipython3
-df_in[df_in.table_id != "Amon"]
+df_in.experiment_id.unique()
 ```
 
 ```{code-cell} ipython3
-# extract the names of all fields in our selected model run
-available_fields = list(df_in[df_in.source_id == source_id][df_in.experiment_id == experiment_id][df_in.table_id == table_id].variable_id)
+df_in[df_in.experiment_id == 'piControl'].table_id.unique()
 ```
 
 ```{code-cell} ipython3
+available_fields = df_in[df_in.experiment_id == 'piControl'][df_in.table_id == '3hr'].variable_id.unique()
 available_fields
 ```
 
@@ -151,14 +123,32 @@ for rq in required_fields:
     else:
         fields_of_interest.append(rq)
 
-if missing_fields != []:
-    print(f"""WARNING: data from model run:
 
-                {source_id}, 
-                {table_id}, 
-                {experiment_id} 
+print(f"Model: {source_id}\n"+"="*30)
+print("Contains required fields:")
+[print("   ", field) for field in required_fields if field in fields_of_interest]
 
-         missing required field(s): {missing_fields}""")
+if fields_of_interest == required_fields:
+    model_passes = True
+    print("All required fields present")
+else: 
+    model_passes = False
+    print("Missing required fields:")
+    [print("   ", field) for field in required_fields if field not in fields_of_interest]
+        
+```
+
+```{code-cell} ipython3
+print("*" * 50)
+print(f"""Fetching domain:
+          {source_id = }
+          {experiment_id = }
+          {table_id = }
+          {lats = }
+          {lons = }
+          {years = }
+          dataset name: my_ds (xarray Dataset)""")
+print("\n"+"*" * 50, "\n")
 ```
 
 ```{code-cell} ipython3
@@ -238,5 +228,6 @@ my_ds = my_ds.drop("time_bnds")
 ```
 
 ```{code-cell} ipython3
-my_ds.to_netcdf(f"./data/{source_id}-{experiment_id}.nc", engine="netcdf4")
+if save_data:
+    my_ds.to_netcdf(f"./data/{source_id}-{experiment_id}.nc", engine="netcdf4")
 ```

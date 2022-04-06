@@ -34,13 +34,13 @@ from metpy.plots import SkewT
 ```
 
 ```{code-cell} ipython3
-the_data = "GFDL-ESM4-piControl.nc"
+the_data = "GFDL-ESM4-piControl.nc" # the data we saved with get_domain.ipynb
 ```
 
 ```{code-cell} ipython3
+# open the data and re-convert time to cftime so xarray is happy
 data_in = xr.open_dataset(f"data/{the_data}", decode_times=False).metpy.quantify()
 data_in["time"] = cftime.num2date(data_in.time, "minutes since 0000-01-01 00:00:00", calendar="noleap", has_year_zero=True)
-#data_in['time'] = cftime.datetime.fromordinal(data_in.time, calendar='noleap') # manually reconvert to cftime
 ```
 
 ```{code-cell} ipython3
@@ -48,12 +48,12 @@ ps = 100000 * units.Pa # temporary hack, should interpolate pressure from daily 
 ```
 
 ```{code-cell} ipython3
-specific_humidity = data_in.huss#[np.isnan(data_in.huss.values) == False]#.metpy.quantify()
-surface_temp = data_in.tas#[np.isnan(hourly_data.tas.values) == False].metpy.quantify()
+# use metpy to convert humidity field to dew point temp
 data_in["td"] = mpcalc.dewpoint_from_specific_humidity(ps, data_in.tas, data_in.huss)
 ```
 
 ```{code-cell} ipython3
+# compute the spatial average
 spatial_average = data_in.mean(dim=("lat", "lon"))
 ```
 
@@ -70,10 +70,6 @@ spatial_average["soil_moisture_grp"] = ((spatial_average.mrsos / 3).round() * 3)
 ```{code-cell} ipython3
 gbysoil = spatial_average.groupby(spatial_average.soil_moisture_grp)
 gbysoil.groups.keys()
-```
-
-```{code-cell} ipython3
-min(gbysoil.groups.keys())
 ```
 
 ```{code-cell} ipython3
@@ -98,13 +94,11 @@ for key in gbysoil.groups.keys():
     ax.plot(hourly_data.hour, plcl_hpa[np.isnan(plcl) == False], **plot_kwargs)
     ax.annotate(f"{round(key)} kg/m$^3$", (21.5, plcl_hpa[-1]))
     
-#ax.legend(loc="upper right")   
+# make the plot match Betts fig 11
 plt.gca().invert_yaxis()
 ax.set_xlabel("UTC")
 ax.set_ylabel("P$_{LCL}$ (hPa)")
 ax.axvline(21, color="k", linewidth=1)
-
-
 ax.xaxis.set_major_locator(MultipleLocator(6))
 ax.xaxis.set_major_formatter('{x:.0f}')
 ax.xaxis.set_minor_locator(MultipleLocator(1))
@@ -114,5 +108,10 @@ ax.set_title("LCL Pressure as a Function of Soil Water Content");
 ```
 
 ```{code-cell} ipython3
+# time series of equivalent potential temperature (surface values only for now)
+spatial_average["theta_eq"] = mpcalc.equivalent_potential_temperature(ps, spatial_average.tas, spatial_average.td)
+```
 
+```{code-cell} ipython3
+plt.plot(spatial_average.theta_eq[:500])
 ```
