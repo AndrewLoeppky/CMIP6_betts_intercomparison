@@ -35,6 +35,7 @@ import json
 import cftime
 import matplotlib.pyplot as plt
 import netCDF4 as nc
+from cftime import date2num
 
 
 # Handy metpy tutorial working with xarray:
@@ -47,44 +48,43 @@ from metpy.plots import SkewT
 
 ```{code-cell} ipython3
 # Attributes of the model we want to analyze (put in csv later)
-source_id = 'CESM2-SE' 
+#source_id = 'CESM2-SE' 
 #source_id = 'GFDL-ESM4' # working fig 11
 #source_id = "CanESM5" 
 #source_id = 'HadGEM3-GC31-MM'
-
 #source_id = 'E3SM-1-0'
 #source_id = 'INM-CM5-0'
 #source_id = 'NorESM2-LM'
 #source_id = 'GFDL-ESM4'
 #source_id = 'MPI-ESM1-2-HR'
+source_id = 'CanESM5'
 
 experiment_id = 'piControl'
-#experiment_id = 'historical'
-#table_id = 'Amon'
-#table_id = '6hrLev'
 table_id = '3hr'
 
 # Domain we wish to study
 
 # test domain #
 ##################################################################
-lats = (15, 20) # lat min, lat max
-lons = (25, 29) # lon min, lon max
-years = (100, 105) # start year, end year (note, no leap days)
-#ceil = 500 # top of domain, hPa
+#lats = (15, 20) # lat min, lat max
+#lons = (25, 29) # lon min, lon max
+#years = (100, 105) # start year, end year (note, no leap days)
 ##################################################################
 
 # Thompson, MB
 lats = (54, 56) # lat min, lat max
 lons = (261, 263) # lon min, lon max
 years = (100, 300) # start year, end year (note, no leap days)
-#ceil = 500 # top of domain, hPa
 
 save_data = False # save as netcdf for further processing?
 ```
 
 ```{code-cell} ipython3
-required_fields = ['tas', 'mrsos', 'huss', 'ps'] 
+%run CMIP6_lib.ipynb
+```
+
+```{code-cell} ipython3
+required_fields = ['tas', 'mrsos', 'huss']#, 'ps'] 
 ```
 
 ```{code-cell} ipython3
@@ -101,16 +101,15 @@ df_in = pd.read_csv(file_path)
 ```
 
 ```{code-cell} ipython3
-df_in.experiment_id.unique()
+#df_in.experiment_id.unique()
 ```
 
 ```{code-cell} ipython3
-df_in[df_in.experiment_id == 'piControl'].table_id.unique()
+#df_in[df_in.experiment_id == 'piControl'].table_id.unique()
 ```
 
 ```{code-cell} ipython3
 available_fields = df_in[df_in.experiment_id == 'piControl'][df_in.table_id == '3hr'].variable_id.unique()
-available_fields
 ```
 
 ```{code-cell} ipython3
@@ -130,7 +129,7 @@ print("Contains required fields:")
 
 if fields_of_interest == required_fields:
     model_passes = True
-    print("All required fields present")
+    print("\nAll required fields present\n")
 else: 
     model_passes = False
     print("Missing required fields:")
@@ -139,7 +138,6 @@ else:
 ```
 
 ```{code-cell} ipython3
-print("*" * 50)
 print(f"""Fetching domain:
           {source_id = }
           {experiment_id = }
@@ -148,61 +146,6 @@ print(f"""Fetching domain:
           {lons = }
           {years = }
           dataset name: my_ds (xarray Dataset)""")
-print("\n"+"*" * 50, "\n")
-```
-
-```{code-cell} ipython3
-def fetch_var_exact(the_dict,df_og):
-    the_keys = list(the_dict.keys())
-    #print(the_keys)
-    key0 = the_keys[0]
-    #print(key0)
-    #print(the_dict[key0])
-    hit0 = df_og[key0] == the_dict[key0]
-    if len(the_keys) > 1:
-        hitnew = hit0
-        for key in the_keys[1:]:
-            hit = df_og[key] == the_dict[key]
-            hitnew = np.logical_and(hitnew,hit)
-            #print("total hits: ",np.sum(hitnew))
-    else:
-        hitnew = hit0
-    df_result = df_og[hitnew]
-    return df_result
-```
-
-```{code-cell} ipython3
-def get_field(variable_id, 
-              df,
-              source_id=source_id,
-              experiment_id=experiment_id,
-              table_id=table_id):
-    """
-    extracts a single variable field from the model
-    """
-
-    var_dict = dict(source_id = source_id, variable_id = variable_id,
-                    experiment_id = experiment_id, table_id = table_id)
-    
-    local_var = fetch_var_exact(var_dict, df)
-    zstore_url = local_var['zstore'].array[0]
-    the_mapper=fsspec.get_mapper(zstore_url)
-    local_var = xr.open_zarr(the_mapper, consolidated=True)
-    return local_var
-```
-
-```{code-cell} ipython3
-def trim_field(df, lat, lon, years):
-    """
-    cuts out a specified domain from an xarrray field
-    
-    lat = (minlat, maxlat)
-    lon = (minlon, maxlon)
-    """
-    new_field = df.sel(lat=slice(lat[0],lat[1]), lon=slice(lon[0],lon[1]))
-    new_field = new_field.isel(time=(new_field.time.dt.year > years[0]))
-    new_field = new_field.isel(time=(new_field.time.dt.year < years[1]))
-    return new_field
 ```
 
 ```{code-cell} ipython3
@@ -210,13 +153,8 @@ def trim_field(df, lat, lon, years):
 my_fields = [get_field(field, df_in) for field in fields_of_interest]
 small_fields = [trim_field(field, lats, lons, years) for field in my_fields]
 my_ds = xr.combine_by_coords(small_fields, compat="broadcast_equals", combine_attrs="drop_conflicts")
-print("Successfully acquired domain")
-```
-
-```{code-cell} ipython3
-from cftime import date2num
-#date2num(my_ds.time, "minutes since 0000-01-01 00:00:00", calendar="noleap", has_year_zero=True)
-my_ds
+print("successfully acquired domain")
+success = True
 ```
 
 ```{code-cell} ipython3
@@ -224,10 +162,23 @@ my_ds
 # https://xarray.pydata.org/en/stable/user-guide/dask.html#chunking-and-performance
 # netcdf cant handle cftime, so convert to ordinal, then back once the file is reopened
 my_ds["time"] = date2num(my_ds.time, "minutes since 0000-01-01 00:00:00", calendar="noleap", has_year_zero=True)
-my_ds = my_ds.drop("time_bnds")
+
+# get rid of time bounds variable, if it exists
+try:
+    my_ds = my_ds.drop("time_bnds")
+except:
+    pass
 ```
 
 ```{code-cell} ipython3
 if save_data:
+    print(f"saving {source_id} to disk as netcdf")
     my_ds.to_netcdf(f"./data/{source_id}-{experiment_id}.nc", engine="netcdf4")
+    print("success\n\n")
+else:
+    print(f"successfully parsed {source_id}\n\n")
+```
+
+```{code-cell} ipython3
+need to debug get field. ugh
 ```
