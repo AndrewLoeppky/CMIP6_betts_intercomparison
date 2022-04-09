@@ -80,7 +80,12 @@ def get_field(variable_id,
                     experiment_id = experiment_id, table_id = table_id)
     
     local_var = fetch_var_exact(var_dict, df)
+    #try:
     zstore_url = local_var['zstore'].array[0]
+    #except:
+    #    zstore_url = local_var['zstore']
+    #finally:
+    #    print(f"{variable_id} variable not found in {source_id}")
     the_mapper=fsspec.get_mapper(zstore_url)
     local_var = xr.open_zarr(the_mapper, consolidated=True)
     return local_var

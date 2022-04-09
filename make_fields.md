@@ -13,7 +13,7 @@ kernelspec:
 
 # Make Fields
 
-Take a domain with mandatory variables and generate the fields required to plot Betts fig 11 
+Take a domain with mandatory variables and generate the fields required to plot Betts fig 11
 
 ```{code-cell} ipython3
 import xarray as xr
@@ -83,6 +83,7 @@ for key in gbysoil.groups.keys():
     # find and plot the lcl
     plcl, tlcl = mpcalc.lcl(ps, hourly_data.tas, hourly_data.td)
     plcl_hpa = plcl / 100
+    # HERE should add an hour 24 to each line by copying hour 0
     
     if key == min(gbysoil.groups.keys()):
         plot_kwargs = {"color":"darkblue"}
@@ -113,5 +114,60 @@ spatial_average["theta_eq"] = mpcalc.equivalent_potential_temperature(ps, spatia
 ```
 
 ```{code-cell} ipython3
-plt.plot(spatial_average.theta_eq[:500])
+plt.scatter(spatial_average.theta_eq, spatial_average.mrsos)
+```
+
+```{code-cell} ipython3
+fig, ax = plt.subplots()
+for key in gbysoil.groups.keys():
+    # group by hour
+    hourly_data = gbysoil[key].groupby(gbysoil[key].time.dt.hour).mean(dim="time")  
+    
+    
+    # find and plot the lcl
+    plcl, tlcl = mpcalc.lcl(ps, hourly_data.tas, hourly_data.td)
+    plcl_hpa = plcl / 100
+    betts_plcl = 100 * units.hectopascal - plcl_hpa
+    # add code here to add hour 24 to each line
+    
+    #if key == min(gbysoil.groups.keys()):
+    #    plot_kwargs = {"color":"darkblue"}
+    #elif key == max(gbysoil.groups.keys()):
+    #    plot_kwargs = {"color":"red"}
+    #else:
+    #    plot_kwargs = {"color":"black", "linestyle":"--", "linewidth":0.8}
+    
+    ax.scatter(int(key), max(betts_plcl[np.isnan(plcl) == False]), **plot_kwargs)
+    ax.scatter(int(key), min(betts_plcl[np.isnan(plcl) == False]), **plot_kwargs)
+    
+    ax.annotate(f"{round(key)} kg/m$^3$", (21.5, plcl_hpa[-1]))
+```
+
+```{code-cell} ipython3
+
+fig, ax = plt.subplots()
+for key in gbysoil.groups.keys():
+    # group by hour
+    hourly_data = gbysoil[key].groupby(gbysoil[key].time.dt.hour).mean(dim="time")  
+    
+    # find and plot the lcl
+    plcl, tlcl = mpcalc.lcl(ps, hourly_data.tas, hourly_data.td)
+    plcl_hpa = plcl / 100
+    # HERE should add an hour 24 to each line by copying hour 0
+    
+    
+    ax.plot(hourly_data.hour, hourly_data.theta_eq)
+    ax.annotate(f"{round(key)} kg/m$^3$", (21.5, plcl_hpa[-1]))
+    
+# make the plot match Betts fig 11
+plt.gca().invert_yaxis()
+ax.set_xlabel("UTC")
+ax.set_ylabel("P$_{LCL}$ (hPa)")
+ax.axvline(21, color="k", linewidth=1)
+ax.xaxis.set_major_locator(MultipleLocator(6))
+ax.xaxis.set_major_formatter('{x:.0f}')
+ax.xaxis.set_minor_locator(MultipleLocator(1))
+ax.set_xticks((0,6,12,18))
+ax.set_xlim(0,26)
+ax.set_title("LCL Pressure as a Function of Soil Water Content");
 ```

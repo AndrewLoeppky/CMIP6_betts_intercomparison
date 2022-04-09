@@ -23,7 +23,7 @@ bad_models = []
 ```
 
 ```{code-cell} ipython3
-for model in hot_models:
+for model in cold_models:
     source_id = model
     
     try:

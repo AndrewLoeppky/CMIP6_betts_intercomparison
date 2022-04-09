@@ -57,24 +57,25 @@ from metpy.plots import SkewT
 #source_id = 'NorESM2-LM'
 #source_id = 'GFDL-ESM4'
 #source_id = 'MPI-ESM1-2-HR'
-source_id = 'CanESM5'
+#source_id = 'CanESM5'
 
 experiment_id = 'piControl'
+experiment_id = 'historical'
 table_id = '3hr'
 
 # Domain we wish to study
 
 # test domain #
 ##################################################################
-#lats = (15, 20) # lat min, lat max
-#lons = (25, 29) # lon min, lon max
-#years = (100, 105) # start year, end year (note, no leap days)
+lats = (15, 20) # lat min, lat max
+lons = (25, 29) # lon min, lon max
+years = (100, 105) # start year, end year (note, no leap days)
 ##################################################################
 
 # Thompson, MB
-lats = (54, 56) # lat min, lat max
-lons = (261, 263) # lon min, lon max
-years = (100, 300) # start year, end year (note, no leap days)
+#lats = (54, 56) # lat min, lat max
+#lons = (261, 263) # lon min, lon max
+#years = (100, 300) # start year, end year (note, no leap days)
 
 save_data = False # save as netcdf for further processing?
 ```
@@ -101,39 +102,32 @@ df_in = pd.read_csv(file_path)
 ```
 
 ```{code-cell} ipython3
-#df_in.experiment_id.unique()
-```
-
-```{code-cell} ipython3
-#df_in[df_in.experiment_id == 'piControl'].table_id.unique()
-```
-
-```{code-cell} ipython3
-available_fields = df_in[df_in.experiment_id == 'piControl'][df_in.table_id == '3hr'].variable_id.unique()
+# this is how to get fields!
+#df_in[df_in.source_id == source_id][df_in.table_id == table_id][df_in.experiment_id == experiment_id]
 ```
 
 ```{code-cell} ipython3
 # check that our run has all required fields, list problem variables
-fields_of_interest = []
-missing_fields = []
-for rq in required_fields:
-    if rq not in available_fields:
-        missing_fields.append(rq)
-    else:
-        fields_of_interest.append(rq)
+#fields_of_interest = []
+#missing_fields = []
+#for rq in required_fields:
+#    if rq not in available_fields:
+#        missing_fields.append(rq)
+#    else:
+#        fields_of_interest.append(rq)
 
 
-print(f"Model: {source_id}\n"+"="*30)
-print("Contains required fields:")
-[print("   ", field) for field in required_fields if field in fields_of_interest]
+#print(f"Model: {source_id}\n"+"="*30)
+#print("Contains required fields:")
+#[print("   ", field) for field in required_fields if field in fields_of_interest]
 
-if fields_of_interest == required_fields:
-    model_passes = True
-    print("\nAll required fields present\n")
-else: 
-    model_passes = False
-    print("Missing required fields:")
-    [print("   ", field) for field in required_fields if field not in fields_of_interest]
+#if fields_of_interest == required_fields:
+#    model_passes = True
+#    print("\nAll required fields present\n")
+#else: 
+#    model_passes = False
+#    print("Missing required fields:")
+#    [print("   ", field) for field in required_fields if field not in fields_of_interest]
         
 ```
 
@@ -149,12 +143,26 @@ print(f"""Fetching domain:
 ```
 
 ```{code-cell} ipython3
+df_in[df_in.variable_id == "huss"][df_in.table_id == "3hr"]
+```
+
+```{code-cell} ipython3
+#fetch_var(source_id, experiment_id, table_id, 'tas')
+#df_in[df_in.experiment_id == 'piControl'].table_id.unique()
+get_field("huss", df_in)
+```
+
+```{code-cell} ipython3
 # grab all fields of interest and combine
-my_fields = [get_field(field, df_in) for field in fields_of_interest]
+my_fields = [get_field(field, df_in) for field in required_fields]
 small_fields = [trim_field(field, lats, lons, years) for field in my_fields]
 my_ds = xr.combine_by_coords(small_fields, compat="broadcast_equals", combine_attrs="drop_conflicts")
 print("successfully acquired domain")
 success = True
+```
+
+```{code-cell} ipython3
+my_ds
 ```
 
 ```{code-cell} ipython3
@@ -179,6 +187,7 @@ else:
     print(f"successfully parsed {source_id}\n\n")
 ```
 
-```{code-cell} ipython3
-need to debug get field. ugh
-```
+re-write this from scratch. 
+
+1) select df_in where table_id == 3hr, and all required fields exist
+2) slice and save each dataset as netcdf
