@@ -27,7 +27,7 @@ experiment_id = 'historical'
 ##################################################################
 lats = (15, 20) # lat min, lat max
 lons = (25, 29) # lon min, lon max
-years = (1960, 2000) # start year, end year (note, no leap days)
+years = (2013, 2015) # start year, end year (note, no leap days)
 ##################################################################
 
 # Thompson, MB
@@ -50,6 +50,8 @@ try:
     fig10_models.remove('MIROC6')
 except:
     pass
+
+fig10_models = ['ACCESS-CM2', 'ACCESS-ESM1-5', 'AWI-ESM-1-1-LR']
 ```
 
 ```{code-cell} ipython3
@@ -76,7 +78,7 @@ for source in fig10_models:
 ```
 
 ```{code-cell} ipython3
-ds_3h.time
+ds_3h
 ```
 
 ```{code-cell} ipython3
@@ -85,7 +87,7 @@ for source in fig10_models:
     source_id = source
     table_id = 'day'
     %run CMIP6_lib.ipynb
-    required_vars = ['mrsos']
+    required_fields = ['mrsos']
     print(f"""Fetching domain:
           {source_id = }
           {experiment_id = }
@@ -104,4 +106,13 @@ for source in fig10_models:
 
 ```{code-cell} ipython3
 ds_day
+```
+
+```{code-cell} ipython3
+day_interp = ds_day.interp(time=ds_3h["time"])
+day_interp
+```
+
+```{code-cell} ipython3
+ds_3h.merge(day_interp)
 ```
