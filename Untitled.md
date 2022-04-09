@@ -11,6 +11,14 @@ kernelspec:
   name: python3
 ---
 
+## Useful Docs
+
+https://docs.google.com/document/d/1yUx6jr9EdedCOLd--CPdTfGDwEwzPpCF6p1jRmqx-0Q/edit#
+
+https://agupubs.onlinelibrary.wiley.com/doi/epdf/10.3894/JAMES.2009.1.4
+
+https://www.carbonbrief.org/cmip6-the-next-generation-of-climate-models-explained
+
 ```{code-cell} ipython3
 import xarray as xr
 import pooch
@@ -35,7 +43,7 @@ from metpy.plots import SkewT
 ```
 
 ```{code-cell} ipython3
-# get esm datastore
+# get all the data from google's datastore
 odie = pooch.create(
     path="./.cache",
     base_url="https://storage.googleapis.com/cmip6/",
@@ -48,19 +56,40 @@ df_in = pd.read_csv(file_path)
 ```
 
 ```{code-cell} ipython3
-df_in[df_in.table_id == "3hr"]
+# only want table id "piControl" or "historical"
+df_expt = df_in[(df_in.experiment_id == "piControl") | (df_in.experiment_id == "historical")]
 ```
 
 ```{code-cell} ipython3
-table_id = "3hr"
+# we only want 3hr data or less
+df_3hr = df_expt[(df_expt.table_id == "3hr") | (df_expt.table_id == "CF3hr")]
+df_3hr
 ```
 
 ```{code-cell} ipython3
-correct_table = df_in[df_in.table_id == table_id][df_in.experiment_id == "historical"]
+models = df_3hr.groupby("source_id")
 ```
 
 ```{code-cell} ipython3
-correct_table
+# variables required to create figure 10
+fig10_vars = ['tas', 'mrsos', 'huss']
+
+# which models are able to produce figure 10?
+fig10_models = []
+```
+
+```{code-cell} ipython3
+for model in models.groups.keys():
+    the_model = models.get_group(model) #df_3hr[df_3hr.source_id == model]
+    model_vars = list(the_model.variable_id)
+    if all(i in model_vars for i in fig10_vars) == True:
+        fig10_models.append(model)
+```
+
+```{code-cell} ipython3
+#for model in models.groups.keys():
+    #print(model)
+fig10_models
 ```
 
 ```{code-cell} ipython3
@@ -68,9 +97,11 @@ grouped = correct_table.groupby("source_id")
 ```
 
 ```{code-cell} ipython3
-grouped.groups.keys()
+my_model = grouped.get_group("GFDL-ESM4")
+my_model
 ```
 
 ```{code-cell} ipython3
-
+a = list(my_model.variable_id)
+print(all(i in a for i in ["vas", "huss"]))
 ```
