@@ -48,18 +48,10 @@ from metpy.plots import SkewT
 
 ```{code-cell} ipython3
 # Attributes of the model we want to analyze (put in csv later)
-#source_id = 'CESM2-SE' 
 #source_id = 'GFDL-ESM4' # working fig 11
-#source_id = "CanESM5" 
-#source_id = 'HadGEM3-GC31-MM'
-#source_id = 'E3SM-1-0'
-#source_id = 'INM-CM5-0'
-#source_id = 'NorESM2-LM'
-#source_id = 'GFDL-ESM4'
-#source_id = 'MPI-ESM1-2-HR'
-#source_id = 'CanESM5'
+source_id = 'ACCESS-CM2'
 
-experiment_id = 'piControl'
+#experiment_id = 'piControl'
 experiment_id = 'historical'
 table_id = '3hr'
 
@@ -69,7 +61,7 @@ table_id = '3hr'
 ##################################################################
 lats = (15, 20) # lat min, lat max
 lons = (25, 29) # lon min, lon max
-years = (100, 105) # start year, end year (note, no leap days)
+years = (1961, 1972) # start year, end year (note, no leap days)
 ##################################################################
 
 # Thompson, MB
@@ -85,7 +77,7 @@ save_data = False # save as netcdf for further processing?
 ```
 
 ```{code-cell} ipython3
-required_fields = ['tas', 'mrsos', 'huss']#, 'ps'] 
+required_fields = ['tas', 'huss']#, 'ps'] , 'mrsos', 
 ```
 
 ```{code-cell} ipython3
@@ -143,16 +135,6 @@ print(f"""Fetching domain:
 ```
 
 ```{code-cell} ipython3
-df_in[df_in.variable_id == "huss"][df_in.table_id == "3hr"]
-```
-
-```{code-cell} ipython3
-#fetch_var(source_id, experiment_id, table_id, 'tas')
-#df_in[df_in.experiment_id == 'piControl'].table_id.unique()
-get_field("huss", df_in)
-```
-
-```{code-cell} ipython3
 # grab all fields of interest and combine
 my_fields = [get_field(field, df_in) for field in required_fields]
 small_fields = [trim_field(field, lats, lons, years) for field in my_fields]
@@ -163,6 +145,10 @@ success = True
 
 ```{code-cell} ipython3
 my_ds
+```
+
+```{code-cell} ipython3
+
 ```
 
 ```{code-cell} ipython3
