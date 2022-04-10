@@ -37,7 +37,7 @@ lons = (260, 263) # lon min, lon max
 years = (1960, 2015) # start year, end year (note, no leap days)
 ##################################################################
 
-save_data = True #False # save as netcdf for further processing?
+save_data = False # save as netcdf for further processing?
 ```
 
 ```{code-cell} ipython3
@@ -107,9 +107,10 @@ for source in fig10_models:
     print("interpolating")
     day_interp = ds_day.interp_like(ds_3h)
     print("scrubbing NaN values")
-    day_interp = day_interp.interpolate_na(dim="time").chunk({"time":600})
+    day_interp = day_interp.interpolate_na(dim="time")
     print("merging datasets")
-    full_dataset = ds_3h.merge(day_interp)#.dropna(dim="time")
+    full_dataset = ds_3h.merge(day_interp).metpy.quantify().chunk({"time":10000})
+    
     
     if save_data:
         print(f"saving {source_id} to disk as netcdf")
@@ -120,6 +121,12 @@ for source in fig10_models:
         print(f"successfully parsed {source_id}\n\n")
 ```
 
+## plot figure 10
+
 ```{code-cell} ipython3
-full_dataset
+spatial_average = full_dataset.mean(dim=("lat","lon"))
+```
+
+```{code-cell} ipython3
+
 ```

@@ -100,34 +100,49 @@ for data in files:
 ```
 
 ```{code-cell} ipython3
-data='ACCESS-CM2-historical_mean.nc'
+data = 'CNRM-CM6-1-historical.nc'
 # open the data and re-convert time to cftime so xarray is happy
 data_in = xr.open_dataset(f"data/{data}", engine="netcdf4", decode_times=False)#.metpy.quantify()
-data_in = data_in.drop("height")
 data_in["tas"] = data_in.tas * units.kelvin
 data_in["time"] = cftime.num2date(data_in.time, "minutes since 0000-01-01 00:00:00", calendar="noleap", has_year_zero=True)
 data_in["td"] = mpcalc.dewpoint_from_specific_humidity(ps, data_in.tas, data_in.huss)
-data_in["soil_moisture_grp"] = (data_in.mrsos / 2).round() * 2
-data_in
+```
+
+```{code-cell} ipython3
+spatial_average = data_in.mean(dim=("lat","lon")).dropna(dim="time").chunk({"time":1000})
+```
+
+```{code-cell} ipython3
+# sort the file into 6 groups
+the_max = float(spatial_average.mrsos.max().values)
+the_min = float(spatial_average.mrsos.min().values)
+the_range =  the_max - the_min
+
+spatial_average["soil_moisture_grp"] = ((spatial_average.mrsos / (the_range / 6)).round() * (the_range / 6)).round()
+```
+
+```{code-cell} ipython3
+gbysoil = spatial_average.groupby(spatial_average.soil_moisture_grp)
+```
+
+```{code-cell} ipython3
+gbysoil.groups.keys()
+```
+
+```{code-cell} ipython3
+gbysoil[26.0]
 ```
 
 ```{code-cell} ipython3
 
-# compute the spatial average
-#spatial_average = data_in.mean(dim=("lat", "lon"))
-#print("calculated spatial average")
-spatial_average = data_in
+```
 
-# separate by soil moisture by rounding to nearest kg/m3 in top soil layer
-the_max = max(spatial_average.mrsos[np.isnan(spatial_average.mrsos.values) == False])
-the_min = min(spatial_average.mrsos[np.isnan(spatial_average.mrsos.values) == False])
-the_range =  the_max - the_min
+```{code-cell} ipython3
+hourly_data = gbysoil[26.0].groupby(gbysoil[26.0].time.dt.hour)
+hourly_data[9]
+```
 
-spatial_average["soil_moisture_grp"] = ((spatial_average.mrsos / (the_range / 6)).round() * (the_range / 6))[np.isnan(spatial_average.mrsos.values) == False]
-
-
-gbysoil = spatial_average.groupby(spatial_average.soil_moisture_grp)
-print('generated groupings')
+```{code-cell} ipython3
 # calculate and plot the average diurnal cycle of lcl height
 fig, ax = plt.subplots()
 for key in gbysoil.groups.keys():
