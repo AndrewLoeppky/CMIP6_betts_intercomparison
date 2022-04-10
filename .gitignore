@@ -1,3 +1,5 @@
 # git wont see files listed here
+# silly workaround: jupyterhub cant see file named ".gitignore", so save it here and copy it to the real gitignore
 *cache*
 data/*
+data_2/*
