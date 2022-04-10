@@ -120,13 +120,3 @@ for source in fig10_models:
     else:
         print(f"successfully parsed {source_id}\n\n")
 ```
-
-## plot figure 10
-
-```{code-cell} ipython3
-spatial_average = full_dataset.mean(dim=("lat","lon"))
-```
-
-```{code-cell} ipython3
-
-```
