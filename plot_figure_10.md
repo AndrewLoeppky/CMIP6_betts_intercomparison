@@ -33,12 +33,9 @@ from metpy.plots import SkewT
 
 ```{code-cell} ipython3
 files = os.listdir("data/")
+files.remove('GFDL-CM4-piControl-fig10.nc')
 files
 ```
-
-working files:
-
-'ACCESS-ESM1-5-historical-fig10.nc'
 
 ```{code-cell} ipython3
 ps = 100000 * units.Pa # temporary hack, should interpolate pressure from daily timeseries
@@ -78,7 +75,7 @@ for data in files:
     
     # calculate and plot the average diurnal cycle of lcl height
     fig, ax = plt.subplots()
-    lposition = 0 # for annotating plot
+    lposition = 1.1 # for annotating plot
     for key in mrsos_keys:
         # group by hour
         hourly_data = gbysoil[key].groupby(gbysoil[key].time.dt.hour).mean(dim="time") 
@@ -102,7 +99,7 @@ for data in files:
         
         
         #the_label = ax.annotate(f"{round(key)} kg/m$^3$", (24, the_lcl[-1]))
-        lposition += 1 / 5
+        lposition -= 1 / 5
         ax.annotate(f"{round(key)} kg/m$^3$",
                     xy=(18, the_lcl[-3]), xycoords='data',
                     xytext=(1.01, lposition), textcoords='axes fraction',
@@ -120,8 +117,4 @@ for data in files:
     ax.set_xticks((0,6,12,18,24))
     ax.set_xlim(0,24)
     ax.set_title(data[:-9]);
-```
-
-```{code-cell} ipython3
-data_in
 ```
