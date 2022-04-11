@@ -37,7 +37,7 @@ lons = (260, 263) # lon min, lon max
 years = (1960, 2015) # start year, end year (note, no leap days)
 ##################################################################
 
-save_data = False # save as netcdf for further processing?
+save_data = True # save as netcdf for further processing?
 ```
 
 ```{code-cell} ipython3
@@ -114,7 +114,7 @@ for source in fig10_models:
     
     if save_data:
         print(f"saving {source_id} to disk as netcdf")
-        full_dataset.to_netcdf(f"./data/{source_id}-{experiment_id}.nc", engine="netcdf4")
+        full_dataset.to_netcdf(f"./data/{source_id}-{experiment_id}-fig10.nc", engine="netcdf4")
         
         print("success\n\n")
     else:
