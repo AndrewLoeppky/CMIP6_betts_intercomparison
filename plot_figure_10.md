@@ -36,6 +36,10 @@ files = os.listdir("data/")
 files
 ```
 
+working files:
+
+'ACCESS-ESM1-5-historical-fig10.nc'
+
 ```{code-cell} ipython3
 ps = 100000 * units.Pa # temporary hack, should interpolate pressure from daily timeseries
 ```
@@ -44,10 +48,16 @@ ps = 100000 * units.Pa # temporary hack, should interpolate pressure from daily 
 for data in files:
     # open the data and re-convert time to cftime so xarray is happy
     data_in = xr.open_dataset(f"data/{data}", engine="netcdf4", decode_times=False).metpy.quantify()
-    data_in["time"] = cftime.num2date(data_in.time, "hours since 1850-01-01 00:00:00", calendar="noleap", has_year_zero=True)
+    #data_in["time"] = cftime.num2date(data_in.time, "hours since 1850-01-01 00:00:00", calendar="noleap", has_year_zero=True)
+    data_in["time"] = cftime.num2date(data_in.time, "hours since 0001-01-01 03:00:00", calendar="noleap", has_year_zero=True)
+    
     
     # use metpy to convert humidity field to dew point temp
-    data_in["td"] = mpcalc.dewpoint_from_specific_humidity(ps, data_in.tas, data_in.huss)
+    try:
+        data_in["td"] = mpcalc.dewpoint_from_specific_humidity(ps, data_in.tas, data_in.huss)
+    except ValueError:
+        data_in["tas"] = data_in.tas * units.kelvin
+        data_in["td"] = mpcalc.dewpoint_from_specific_humidity(ps, data_in.tas, data_in.huss)
 
     # compute the spatial average
     spatial_average = data_in.mean(dim=("lat", "lon"))
@@ -77,7 +87,7 @@ for data in files:
         plcl, tlcl = mpcalc.lcl(ps, hourly_data.tas, hourly_data.td)
         plcl_hpa = plcl / 100
         
-
+        # assign colors to match Betts
         if key == min(mrsos_keys):
             plot_kwargs = {"color":"darkblue"}
         elif key == max(mrsos_keys):
@@ -109,5 +119,9 @@ for data in files:
     ax.xaxis.set_minor_locator(MultipleLocator(1))
     ax.set_xticks((0,6,12,18,24))
     ax.set_xlim(0,24)
-    ax.set_title(data[:-3]);
+    ax.set_title(data[:-9]);
+```
+
+```{code-cell} ipython3
+data_in
 ```

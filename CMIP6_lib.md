@@ -104,7 +104,7 @@ def trim_field(df, lat, lon, years):
     # handle cftime.DatetimeNoLeap time formatting
     if new_field.time.dtype == 'O':
         new_field = new_field.isel(time=(new_field.time.dt.year >= years[0]))
-        new_field = new_field.isel(time=(new_field.time.dt.year <= years[1]))
+        #new_field = new_field.isel(time=(new_field.time.dt.year <= years[1]))
     
     # handle numpy.datetime64[ns] time formatting
     elif new_field.time.dtype == '<M8[ns]':

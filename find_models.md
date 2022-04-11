@@ -73,7 +73,7 @@ df_in = pd.read_csv(file_path)
 
 ```{code-cell} ipython3
 # only want table id "piControl" or "historical"
-df_expt = df_in[(df_in.experiment_id == "historical")]# | (df_in.experiment_id == "historical")]
+df_expt = df_in[(df_in.experiment_id == "piControl")]# | (df_in.experiment_id == "historical")]
 ```
 
 ## Figure 10 Models

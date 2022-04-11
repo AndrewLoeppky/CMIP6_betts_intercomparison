@@ -16,7 +16,7 @@ kernelspec:
 ```{code-cell} ipython3
 # run the model validation notebook, which creates a variable `fig10_models`,
 # which is a list of models with the necessary fields
-experiment_id = 'historical'
+experiment_id = 'piControl'
 %run find_models.ipynb
 ```
 
@@ -32,9 +32,10 @@ experiment_id = 'historical'
 
 # Thompson, MB
 ##################################################################
-lats = (53, 56) # lat min, lat max
-lons = (260, 263) # lon min, lon max
+lats = (51, 57) # lat min, lat max
+lons = (259, 265) # lon min, lon max
 years = (1960, 2015) # start year, end year (note, no leap days)
+years = (400, 500)
 ##################################################################
 
 save_data = True # save as netcdf for further processing?
@@ -42,20 +43,16 @@ save_data = True # save as netcdf for further processing?
 
 ```{code-cell} ipython3
 # remove problem models
-fig10_models.remove('MIROC-ES2L')
-fig10_models.remove('MIROC6')
-fig10_models.remove('SAM0-UNICON')
-```
-
-```{code-cell} ipython3
-fig10_models = ['CNRM-CM6-1',] # for testing
+#fig10_models.remove('MIROC-ES2L')
+#fig10_models.remove('MIROC6')
+#fig10_models.remove('SAM0-UNICON')
 ```
 
 ```{code-cell} ipython3
 # parse each model in the list 
 for source in fig10_models:
     source_id = source
-    print("acquiring 3hrly data")
+    
     # get all the 3hr fields
     table_id = '3hr'
     %run CMIP6_lib.ipynb
@@ -66,7 +63,7 @@ for source in fig10_models:
           {lats = }
           {lons = }
           {years = }""")
-    
+    print("acquiring 3hrly data")
     # grab all fields of interest and combine (3hr)
     my_fields = [get_field(field, df_in) for field in required_fields]
     small_fields = [trim_field(field, lats, lons, years) for field in my_fields]
@@ -94,7 +91,7 @@ for source in fig10_models:
     ds_day = xr.combine_by_coords(small_fields, compat="override", combine_attrs="drop_conflicts")
     
     # filter extraneous dimensions
-    for dim in ["height", "time_bounds", "depth", "depth_bounds"]:
+    for dim in ["height", "time_bounds", "depth", "depth_bounds", "lat_bnds", "lon_bnds"]:
         try:
             ds_day = ds_day.drop(dim)
         except:
@@ -105,7 +102,7 @@ for source in fig10_models:
     
     # interpolate daily data onto the 3hourly and merge.
     print("interpolating")
-    day_interp = ds_day.interp_like(ds_3h)
+    day_interp = ds_day.interp_like(ds_3h).chunk({"time":-1})
     print("scrubbing NaN values")
     day_interp = day_interp.interpolate_na(dim="time")
     print("merging datasets")
