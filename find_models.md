@@ -21,11 +21,11 @@ Looking for 3hrly or better surface temp and humidity (`tas, huss`) and daily or
 
 **Fig 11**
 
-Looking for sensible and latent heat fluxes (`?, ?`) and precipitation rate (`?`)
+Looking for same as fig 10, plus sensible and latent heat fluxes (`hfss`, `hfls`) and precipitation rate (`pr`)
 
 **Fig 16**
 
-Looking for precip, evap total column water, and omega
+Looking for precip (`pr`), evap (`es`, "bare soil evaporation"), total column water vapor (`prw`), and omega (`wap`)
 
 ## Useful Docs
 
@@ -73,7 +73,7 @@ df_in = pd.read_csv(file_path)
 
 ```{code-cell} ipython3
 # only want table id "piControl" or "historical"
-df_expt = df_in[(df_in.experiment_id == "piControl")]# | (df_in.experiment_id == "historical")]
+df_expt = df_in[(df_in.experiment_id == "historical")]# | (df_in.experiment_id == "historical")]
 ```
 
 ## Figure 10 Models
@@ -156,7 +156,7 @@ for model in models_day.groups.keys():
 ```
 
 ```{code-cell} ipython3
-# models that contain 3hrly temp and humidity, and daily soil moisture
+# models that contain vars needed for figure 11
 fig11_models = []
 print("models to use for figure 11")
 print("=" *40)
@@ -171,4 +171,10 @@ print("=" *40)
 for model in fig11_models_day:
     if model not in fig11_models_3hr:
         print(model)
+```
+
+## Figure 16 Models
+
+```{code-cell} ipython3
+
 ```

@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 import netCDF4 as nc
 import os
+from pathlib import Path
 
 # Handy metpy tutorial working with xarray:
 # https://unidata.github.io/MetPy/latest/tutorials/xarray_tutorial.html#sphx-glr-tutorials-xarray-tutorial-py
@@ -32,13 +33,11 @@ from metpy.plots import SkewT
 ```
 
 ```{code-cell} ipython3
-time_convert = -7 # convert from UTC to Thompson, MB time
-```
-
-```{code-cell} ipython3
-files = os.listdir("data/")
-files.remove('GFDL-CM4-piControl-fig10.nc') # this one doesnt work, need to debug
-files
+file_path = Path("data/")
+files = list(file_path.glob("*fig10*"))
+#files = os.listdir(Path("data/*fig10*"))
+#files.remove('GFDL-CM4-piControl-fig10.nc') # this one doesnt work, need to debug
+#files
 ```
 
 ```{code-cell} ipython3
@@ -48,7 +47,7 @@ ps = 100000 * units.Pa # temporary hack, should interpolate pressure from daily 
 ```{code-cell} ipython3
 for data in files:
     # open the data and re-convert time to cftime so xarray is happy
-    data_in = xr.open_dataset(f"data/{data}", engine="netcdf4", decode_times=False).metpy.quantify()
+    data_in = xr.open_dataset(data, engine="netcdf4", decode_times=False).metpy.quantify()
     #data_in["time"] = cftime.num2date(data_in.time, "hours since 1850-01-01 00:00:00", calendar="noleap", has_year_zero=True)
     data_in["time"] = cftime.num2date(data_in.time, "hours since 0001-01-01 03:00:00", calendar="noleap", has_year_zero=True)
     
@@ -120,5 +119,5 @@ for data in files:
     ax.set_xticks((0,6,12,18,24), labels=(17, 23, 0, 6, 12))
 
     ax.set_xlim(0,24)
-    ax.set_title(data[:-9]);
+    ax.set_title(str(data)[5:-9]);
 ```
