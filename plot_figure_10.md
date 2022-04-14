@@ -32,8 +32,12 @@ from metpy.plots import SkewT
 ```
 
 ```{code-cell} ipython3
+time_convert = -7 # convert from UTC to Thompson, MB time
+```
+
+```{code-cell} ipython3
 files = os.listdir("data/")
-files.remove('GFDL-CM4-piControl-fig10.nc')
+files.remove('GFDL-CM4-piControl-fig10.nc') # this one doesnt work, need to debug
 files
 ```
 
@@ -108,13 +112,13 @@ for data in files:
 
     # make the plot match Betts fig 11
     plt.gca().invert_yaxis()
-    ax.set_xlabel("UTC")
+    ax.set_xlabel("Local Time")
     ax.set_ylabel("P$_{LCL}$ (hPa)")
-    #ax.axvline(21, color="k", linewidth=1)
     ax.xaxis.set_major_locator(MultipleLocator(6))
     ax.xaxis.set_major_formatter('{x:.0f}')
     ax.xaxis.set_minor_locator(MultipleLocator(1))
-    ax.set_xticks((0,6,12,18,24))
+    ax.set_xticks((0,6,12,18,24), labels=(17, 23, 0, 6, 12))
+
     ax.set_xlim(0,24)
     ax.set_title(data[:-9]);
 ```
