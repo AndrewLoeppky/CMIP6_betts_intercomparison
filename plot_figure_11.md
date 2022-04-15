@@ -71,6 +71,7 @@ spatial_average = data_in.mean(dim=("lat", "lon")).dropna(dim="time")
 
 ```{code-cell} ipython3
 # figure to match Betts exactly
+"""
 fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
 plt.gca().invert_yaxis()
 
@@ -97,6 +98,7 @@ ax2.scatter(spatial_average.EF[med2_pr], lcl_dep - spatial_average.plcl[med2_pr]
 ax2.scatter(spatial_average.EF[heavy_pr], lcl_dep - spatial_average.plcl[heavy_pr], label="5 < PR mm day$^{-1}$", alpha=alpha)
 
 ax1.legend(loc='upper right')
+"""
 ```
 
 ```{code-cell} ipython3
