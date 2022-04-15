@@ -76,9 +76,10 @@ plt.gca().invert_yaxis()
 
 # calculate plcl and add to the dataset
 plcl, tlcl = mpcalc.lcl(ps, spatial_average.tas, spatial_average.td)
-lcl_dep = ps - plcl
+
 
 spatial_average["plcl"] = ["time"], plcl_hpa
+#spatial_average["lcl_dep"] = ps - spatial_average.plcl
  
 light_pr = spatial_average.pr <= 1 * units('mm/day')
 med1_pr = (1 * units('mm/day') <= spatial_average.pr) | (spatial_average.pr < 3 * units('mm/day'))
@@ -104,10 +105,11 @@ the_max = float(spatial_average.pr.max().values)
 the_min = float(spatial_average.pr.min().values)
 the_range =  the_max - the_min
 
-spatial_average["precip_group"] = ((spatial_average.pr / (the_range / 4)).round() * (the_range / 4)).round()
+spatial_average["precip_group"] = ((spatial_average.pr / (the_range / 5)).round() * (the_range / 5)).round()
 gbypr = spatial_average.groupby(spatial_average.precip_group)
 
 pr_keys = list(gbypr.groups.keys())
+pr_keys.remove(max(pr_keys))
 pr_keys.remove(max(pr_keys))
 
 fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
