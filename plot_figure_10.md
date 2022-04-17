@@ -23,13 +23,12 @@ from matplotlib.ticker import (MultipleLocator, AutoMinorLocator)
 import netCDF4 as nc
 import os
 from pathlib import Path
+from itertools import cycle
 
 # Handy metpy tutorial working with xarray:
 # https://unidata.github.io/MetPy/latest/tutorials/xarray_tutorial.html#sphx-glr-tutorials-xarray-tutorial-py
 import metpy.calc as mpcalc
-from metpy.cbook import get_test_data
 from metpy.units import units
-from metpy.plots import SkewT
 ```
 
 ```{code-cell} ipython3
@@ -80,6 +79,8 @@ for data in files:
         # calculate and plot the average diurnal cycle of lcl height
         fig, ax = plt.subplots()
         lposition = 1.1 # for annotating plot
+        lines = ["--","-.",":"]
+        linecycler = cycle(lines)
         for key in mrsos_keys:
             # group by hour
             hourly_data = gbysoil[key].groupby(gbysoil[key].time.dt.hour).mean(dim="time") 
@@ -87,33 +88,35 @@ for data in files:
             # find and plot the lcl
             plcl, tlcl = mpcalc.lcl(ps, hourly_data.tas, hourly_data.td)
             plcl_hpa = plcl / 100
-
+            
             # assign colors to match Betts
+            
             if key == min(mrsos_keys):
                 plot_kwargs = {"color":"darkblue"}
             elif key == max(mrsos_keys):
                 plot_kwargs = {"color":"red"}
             else:
-                plot_kwargs = {"color":"black", "linestyle":"--", "linewidth":0.8}
+                plot_kwargs = {"color":"black", "linestyle":next(linecycler), "linewidth":0.8}
 
             # append hour 24 to match hour 0
             the_time = np.append(hourly_data.hour.values, 24)
             the_lcl = np.append(plcl_hpa, plcl_hpa[0])
-            ax.plot(the_time, the_lcl, **plot_kwargs)
+            ax.plot(the_time, the_lcl, label=f"{round(key)} kg/m$^3$", **plot_kwargs)
 
 
             #the_label = ax.annotate(f"{round(key)} kg/m$^3$", (24, the_lcl[-1]))
-            lposition -= 1 / 5
-            ax.annotate(f"{round(key)} kg/m$^3$",
-                        xy=(18, the_lcl[-3]), xycoords='data',
-                        xytext=(1.01, lposition), textcoords='axes fraction',
-                        arrowprops=dict(arrowstyle="->", relpos=(0,0.5)),
-                        horizontalalignment='left', verticalalignment='center')
+            #lposition -= 1 / 5
+            #ax.annotate(f"{round(key)} kg/m$^3$",
+            #            xy=(18, the_lcl[-3]), xycoords='data',
+            #            xytext=(1.01, lposition), textcoords='axes fraction'),
+            #            arrowprops=dict(arrowstyle="->", relpos=(0,0.5)),
+            #            horizontalalignment='left', verticalalignment='center')
 
         # make the plot match Betts fig 11
         plt.gca().invert_yaxis()
         ax.set_xlabel("Local Time")
         ax.set_ylabel("P$_{LCL}$ (hPa)")
+        ax.legend(loc="upper center")
         ax.xaxis.set_major_locator(MultipleLocator(6))
         ax.xaxis.set_major_formatter('{x:.0f}')
         ax.xaxis.set_minor_locator(MultipleLocator(1))
