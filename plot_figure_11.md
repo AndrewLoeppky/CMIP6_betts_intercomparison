@@ -42,11 +42,6 @@ files
 ```
 
 ```{code-cell} ipython3
-files.remove(Path('data/BCC-CSM2-MR-historical-fig11.nc'))
-files.remove(Path('data/CMCC-CM2-SR5-historical-fig11.nc'))
-```
-
-```{code-cell} ipython3
 ps = 100000 * units.Pa # temporary hack, should interpolate pressure from daily timeseries
 ```
 
@@ -88,7 +83,7 @@ for data in files:
         pr_keys.remove(max(pr_keys))
 
         # plot each group
-        fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5))
+        fig, (ax1, ax2) = plt.subplots(1,2, figsize=(10,5), sharey=True)
         for key in pr_keys:
             # find and plot the lcl as a function of soil moisture
             plcl, tlcl = mpcalc.lcl(ps, gbypr[key].tas, gbypr[key].td)
@@ -98,15 +93,15 @@ for data in files:
             ax1.scatter(gbypr[key].mrsos, plcl_hpa, label=f"{round(key)} mm/day", alpha=alpha)
             ax2.scatter(gbypr[key].EF, plcl_hpa, label=f"{round(key)} mm/day", alpha=alpha)
 
-        ax1.legend(loc="upper right")
+        #ax1.legend(loc="upper right")
         ax1.set_xlabel("Upper Soil Water Content (kg/m$^3$)")
         ax1.set_ylabel("P$_{LCL}$ (hPa)")
         ax1.invert_yaxis()
 
-        ax2.legend(loc="upper right")
+        ax2.legend(loc="upper left")
         ax2.set_xlabel("Evaporative Fraction")
-        ax2.set_ylabel("P$_{LCL}$ (hPa)")
-        ax2.invert_yaxis()
+        #ax2.set_ylabel("P$_{LCL}$ (hPa)")
+        #ax2.invert_yaxis()
 
         fig.suptitle(f"{str(data)[5:-9]}")
         plt.tight_layout()
