@@ -19,6 +19,7 @@ Functions for downloading specific fields from CMIP6 model outputs. Turn this in
 import xarray as xr
 import pooch
 import pandas as pd
+from functools import reduce
 import fsspec
 from pathlib import Path
 import time
@@ -80,12 +81,7 @@ def get_field(variable_id,
                     experiment_id = experiment_id, table_id = table_id)
     
     local_var = fetch_var_exact(var_dict, df)
-    #try:
     zstore_url = local_var['zstore'].array[0]
-    #except:
-    #    zstore_url = local_var['zstore']
-    #finally:
-    #    print(f"{variable_id} variable not found in {source_id}")
     the_mapper=fsspec.get_mapper(zstore_url)
     local_var = xr.open_zarr(the_mapper, consolidated=True)
     return local_var
@@ -112,4 +108,126 @@ def trim_field(df, lat, lon, years):
         #new_field = new_field.isel(time=(pd.to_datetime(df.time).year < years[1]))
         
     return new_field
+```
+
+```{code-cell} ipython3
+def find_models(experiment_id, variables):
+    """
+    Returns a list of models which contain the requested variables at requested intervals
+
+    Parameters
+    ----------
+    experiment_id : string
+        model run selected from the list found here:
+            https://docs.google.com/document/d/1yUx6jr9EdedCOLd--CPdTfGDwEwzPpCF6p1jRmqx-0Q/edit#    
+    variables : dict
+        key value pairs {"interval":["var1", "var2"]} specifying requested variables at each time interval
+    
+    Returns
+    -------
+    models : list
+        the source id's for CMIP6 models which fit the requested criteria. Also prints eligible models
+        to screen.
+
+    Example
+    -------
+    In []: find_models("piControl", {"3hr":['tas', 'huss'], "day":['mrsos']})
+    
+    Out []: [GFDL-CM4, GFDL-ESM4]
+    """
+    # get all the data from google's datastore
+    odie = pooch.create(
+        path="./.cache",
+        base_url="https://storage.googleapis.com/cmip6/",
+        registry={
+            "pangeo-cmip6.csv": None
+        },
+    )
+    file_path = odie.fetch("pangeo-cmip6.csv")
+    df_in = pd.read_csv(file_path)
+    
+    # select by experiment_id
+    df_expt = df_in[(df_in.experiment_id == experiment_id)]
+    
+    # create a dictionary containing all models that contain req'd variables
+    # for each interval
+    models = {}
+    for key in variables.keys():
+        df_var = df_expt[df_expt.table_id == key]
+        df_mods = df_var.groupby("source_id")
+        models[key] = list(df_mods.groups.keys())
+        
+    # return models that have ALL req'd variables
+    models_pass = list(reduce(lambda i, j: i & j, (set(x) for x in list(models.values()))))
+    return models_pass    
+```
+
+```{code-cell} ipython3
+def download_data(experiment_id, variables, domain, path, download=True):
+    """
+    Finds model runs that fit specified criteria, selects a domain and saves fields to disk as NETCDF files
+    ** NOTE: Current version only supports datasets with "3hr" and "day" intervals **
+
+    Parameters
+    ----------
+    experiment_id : string
+        model run selected from the list found here:
+            https://docs.google.com/document/d/1yUx6jr9EdedCOLd--CPdTfGDwEwzPpCF6p1jRmqx-0Q/edit#    
+    variables : dict
+        key value pairs {"interval":["var1", "var2"]} specifying requested variables at each time interval
+    domain : dict 
+        specify lattitude and longitude bounds and time interval. Example for Thompson, MB, Canada from year 1960 to 2016:
+        
+        {"lats":(51, 57) 
+         "lons":(259, 265) 
+         "years":(1960, 2015)}
+        
+        NOTE: time formatting is inconsistent among models, i.e. some use hours since 01-01-1850 00:00:00, others begin
+              1960, others begin at arbitrary year zero for spin up...
+    path : str
+        location to save netcdf files. e.g. "../CMIP_data"
+    download : bool
+        set download=False for the first run to ensure all fields are present/correct. Saving to NETCDF can 
+        take a long time, especially for large datasets.
+    
+    Returns
+    -------
+    None. Prints a message to screen indicating success/failure of each model
+    """
+    models_to_use = find_models(experiment_id, variables)
+    
+    for source in models_to_use:
+
+        source_id = source
+        # get all the 3hr fields
+        table_id = '3hr'
+        required_fields = variables['3hr']
+        print(f"""Fetching domain:
+              source_id = {source}
+              experiment_id = {experiment_id}
+              lats = {domain["lats"]}
+              lons = {domain["lons"]}
+              years = {domain["years"]}""")
+        
+        print("acquiring 3hrly data")
+        # grab all fields of interest and combine (3hr)
+        my_fields = [get_field(field, df_in) for field in required_fields]
+        small_fields = [trim_field(field, lats, lons, years) for field in my_fields]
+        ds_3h = xr.combine_by_coords(small_fields, compat="override", combine_attrs="drop_conflicts")
+
+        # filter extraneous dimensions
+        for dim in ["height", "time_bounds", "depth", "depth_bounds"]:
+            try:
+                ds_3h = ds_3h.drop(dim)
+            except:
+                pass
+           
+```
+
+```{code-cell} ipython3
+my_domain = {"lats":(51, 57), "lons":(259, 265), "years":(1960, 2015)}
+```
+
+```{code-cell} ipython3
+download_data("piControl", {"3hr":['tas', 'huss'], "day":['mrsos']}, my_domain, "./data")
 ```
