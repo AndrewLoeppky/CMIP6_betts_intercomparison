@@ -11,9 +11,9 @@ kernelspec:
   name: python3
 ---
 
-# CMIP Scraping Library
+# CMIP6 Library
 
-Functions for downloading specific fields from CMIP6 model outputs. Turn this into a real library or module later on.
+Contains functions for parsing and saving fields from the Climate Model Intercomparison Project (CMIP6), as well as plotting functions for recreating figures from Alan K Betts' 2009 paper.
 
 ```{code-cell} ipython3
 import xarray as xr
@@ -400,7 +400,6 @@ def make_betts_fig11(nc_data, save_loc=None):
               hfls       (surface upward latent heat flux)
               hfss       (surface upward sensible heat flux)
         
-    
     Parameters
     ----------
     nc_data : string
@@ -420,7 +419,7 @@ def make_betts_fig11(nc_data, save_loc=None):
 
     # convert to mm/day and assign units to precip rate (units unspecified in raw data, but CMIP6 specs say its reported in kg/m2/s)
     # https://docs.google.com/spreadsheets/d/1UUtoz6Ofyjlpx5LdqhKcwHFz2SGoTQV2_yekHyMfL9Y/edit#gid=1221485271
-    data_in["pr"] = data_in.pr * 86400 * units('mm/day')
+    data_in["pr"] = data_in["pr"] * 86400 * units('mm/day')
     #data_in["pr"] = data_in.pr * units('mm/day')
 
     # get dew point temp
@@ -459,44 +458,15 @@ def make_betts_fig11(nc_data, save_loc=None):
         ax1.scatter(gbypr[key].mrsos, plcl_hpa, label=f"{round(key)} mm/day", alpha=alpha)
         ax2.scatter(gbypr[key].EF, plcl_hpa, label=f"{round(key)} mm/day", alpha=alpha)
 
-    #ax1.legend(loc="upper right")
     ax1.set_xlabel("Upper Soil Water Content (kg/m$^3$)")
     ax1.set_ylabel("P$_{LCL}$ (hPa)")
     ax1.invert_yaxis()
-
     ax2.legend(loc="upper left")
     ax2.set_xlabel("Evaporative Fraction")
-    #ax2.set_ylabel("P$_{LCL}$ (hPa)")
-    #ax2.invert_yaxis()
 
     fig.suptitle(f"{str(nc_data)[5:-9]}")
     plt.tight_layout()
-```
-
-```{code-cell} ipython3
-my_domain = {"lats":(51, 57), "lons":(259, 265), "years":(1960, 2015)}
-```
-
-```{code-cell} ipython3
-download_data("historical", {"3hr":['tas', 'huss'], "day":['mrsos']}, my_domain, "./data", download=False)
-```
-
-```{code-cell} ipython3
-file_path = Path("data/")
-files = list(file_path.glob("*fig10*"))
-for file in files:
-    try:
-        make_betts_fig10(file, save_loc="./figures")
-    except ValueError:
-        print(f"{file} failed to plot")
-```
-
-```{code-cell} ipython3
-file_path = Path("data/")
-files = list(file_path.glob("*fig11*"))
-for file in files:
-    try:
-        make_betts_fig11(file)
-    except ValueError:
-        print(f"{file} failed to plot")
+    
+    if save_loc != None:
+        plt.savefig(f"{save_loc}/{str(nc_data)[5:-9]}-betts-fig11")
 ```
