@@ -38,7 +38,7 @@ years = (1960, 2015) # start year, end year (note, no leap days)
 years = (400, 500)
 ##################################################################
 
-save_data = True # save as netcdf for further processing?
+save_data = False # save as netcdf for further processing?
 ```
 
 ```{code-cell} ipython3

@@ -70,9 +70,9 @@ def fetch_var_exact(the_dict,df_og):
 ```{code-cell} ipython3
 def get_field(variable_id, 
               df,
-              source_id=source_id,
-              experiment_id=experiment_id,
-              table_id=table_id):
+              source_id,
+              experiment_id,
+              table_id):
     """
     extracts a single variable field from the model
     """
@@ -131,9 +131,9 @@ def find_models(experiment_id, variables):
 
     Example
     -------
-    In []: find_models("piControl", {"3hr":['tas', 'huss'], "day":['mrsos']})
+    In []:   find_models("piControl", {"3hr":['tas', 'huss'], "day":['mrsos']})
     
-    Out []: [GFDL-CM4, GFDL-ESM4]
+    Out []:  [GFDL-CM4, GFDL-ESM4]
     """
     # get all the data from google's datastore
     odie = pooch.create(
@@ -165,7 +165,7 @@ def find_models(experiment_id, variables):
 ```{code-cell} ipython3
 def download_data(experiment_id, variables, domain, path, download=True):
     """
-    Finds model runs that fit specified criteria, selects a domain and saves fields to disk as NETCDF files
+    Finds model runs that fit specified criteria, selects a domain and saves fields to disk as NETCDF files. 
     ** NOTE: Current version only supports datasets with "3hr" and "day" intervals **
 
     Parameters
@@ -182,7 +182,7 @@ def download_data(experiment_id, variables, domain, path, download=True):
          "lons":(259, 265) 
          "years":(1960, 2015)}
         
-        NOTE: time formatting is inconsistent among models, i.e. some use hours since 01-01-1850 00:00:00, others begin
+        NOTE: time formatting is inconsistent between models, i.e. some use hours since 01-01-1850 00:00:00, others begin
               1960, others begin at arbitrary year zero for spin up...
     path : str
         location to save netcdf files. e.g. "../CMIP_data"
@@ -192,18 +192,36 @@ def download_data(experiment_id, variables, domain, path, download=True):
     
     Returns
     -------
-    None. Prints a message to screen indicating success/failure of each model
+    None. Prints a message to screen indicating success/failure of each model download
     """
-    models_to_use = find_models(experiment_id, variables)
+    # get all the data from google's datastore
+    odie = pooch.create(
+        path="./.cache",
+        base_url="https://storage.googleapis.com/cmip6/",
+        registry={
+            "pangeo-cmip6.csv": None
+        },
+    )
+    file_path = odie.fetch("pangeo-cmip6.csv")
+    df_in = pd.read_csv(file_path)
     
-    for source in models_to_use:
-
-        source_id = source
+    # find which models have required fields at desired intervals
+    models_to_use = find_models(experiment_id, variables)
+    print(f"found {len(models_to_use)} compatible model runs\n")
+    
+    for model in models_to_use:
+        # download files if no errors (set this to False later on if error occurs) 
+        if download:
+            do_download = True
+        else:
+            do_download = False
+            
+        source_id = model
         # get all the 3hr fields
         table_id = '3hr'
         required_fields = variables['3hr']
         print(f"""Fetching domain:
-              source_id = {source}
+              source_id = {source_id}
               experiment_id = {experiment_id}
               lats = {domain["lats"]}
               lons = {domain["lons"]}
@@ -211,16 +229,65 @@ def download_data(experiment_id, variables, domain, path, download=True):
         
         print("acquiring 3hrly data")
         # grab all fields of interest and combine (3hr)
-        my_fields = [get_field(field, df_in) for field in required_fields]
-        small_fields = [trim_field(field, lats, lons, years) for field in my_fields]
-        ds_3h = xr.combine_by_coords(small_fields, compat="override", combine_attrs="drop_conflicts")
+        try:
+            my_fields = [get_field(field, df_in, source_id, experiment_id, table_id) for field in variables['3hr']]
+            small_fields = [trim_field(field, domain["lats"], domain["lons"], domain["years"]) for field in my_fields]
+            ds_3h = xr.combine_by_coords(small_fields, compat="override", combine_attrs="drop_conflicts")
+        except IndexError:
+            print(f"ERROR: {model}, required '3hr' field(s) missing or empty")
+            do_download = False
 
         # filter extraneous dimensions
-        for dim in ["height", "time_bounds", "depth", "depth_bounds"]:
+        for dim in ["height", "time_bounds", "depth", "depth_bounds", "lat_bnds", "lon_bnds"]:
             try:
                 ds_3h = ds_3h.drop(dim)
             except:
                 pass
+            
+        print("acquiring daily data")
+        # get all the daily fields
+        table_id = 'day'
+        required_fields = variables['day']
+
+        # grab all fields of interest and combine (day)
+        try:
+            my_fields = [get_field(field, df_in, source_id, experiment_id, table_id) for field in variables['day']]
+            small_fields = [trim_field(field, domain["lats"], domain["lons"], domain["years"]) for field in my_fields]
+            ds_day = xr.combine_by_coords(small_fields, compat="override", combine_attrs="drop_conflicts")
+        except IndexError:
+            print(f"ERROR: {model}, required 'day' field(s) missing or empty")
+            do_download = False
+        except KeyError:
+            print(f"ERROR: {model}, coordinate system not supported")
+            do_download = False
+        
+        # filter extraneous dimensions
+        for dim in ["height", "time_bounds", "depth", "depth_bounds", "lat_bnds", "lon_bnds"]:
+            try:
+                ds_day = ds_day.drop(dim)
+            except:
+                pass
+        
+        # interpolate daily data onto the 3hourly and merge.
+        print("interpolating")
+        try:
+            day_interp = ds_day.interp_like(ds_3h).chunk({"time":-1})
+            print("merging datasets")
+            full_dataset = ds_3h.merge(day_interp, compat='override').metpy.quantify().chunk({"time":10000})
+        except TypeError:
+            print(f"ERROR: {model}, unsupported datetime formatting")
+            do_download = False
+            
+        print("scrubbing NaN values")
+        # day_interp = day_interp.interpolate_na(dim="time") # this needs to be fixed. working on
+        # 2022-04-10, pandas changed function since then???
+        
+        if do_download:
+            print(f"saving {source_id} to disk as netcdf")
+            full_dataset.to_netcdf(f"{path}/{source_id}-{experiment_id}-fig10.nc", engine="netcdf4")
+            print("success\n\n")
+        else:
+            print(f"parsed {source_id}\n\n")
            
 ```
 
@@ -229,5 +296,5 @@ my_domain = {"lats":(51, 57), "lons":(259, 265), "years":(1960, 2015)}
 ```
 
 ```{code-cell} ipython3
-download_data("piControl", {"3hr":['tas', 'huss'], "day":['mrsos']}, my_domain, "./data")
+download_data("historical", {"3hr":['tas', 'huss'], "day":['mrsos']}, my_domain, "./data", download=False)
 ```
